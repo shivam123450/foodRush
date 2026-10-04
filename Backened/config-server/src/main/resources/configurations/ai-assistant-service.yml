@@ -75,3 +75,5 @@ logging:
   level:
     com.foodDelivery.ai_assistant_service: INFO
     org.springframework.ai: INFO
+
+

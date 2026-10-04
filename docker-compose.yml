@@ -5,28 +5,29 @@ networks:
     driver: bridge
 
 volumes:
-  mysql-data:
+  postgres-data:
   redis-data:
   grafana-data:
 
 services:
 
   # ── Infrastructure ────────────────────────────────────────────────
-  mysql:
-    image: mysql:8.0
-    container_name: mysql
+  postgres:
+    image: postgres:16
+    container_name: postgres
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-rootpassword}
-      MYSQL_ROOT_HOST: "%"
+      POSTGRES_USER: ${DB_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
     ports:
-      - "3307:3306"
+      - "5433:5432"
     volumes:
-      - mysql-data:/var/lib/mysql
+      - postgres-data:/var/lib/postgresql/data
+      - ./postgres-init:/docker-entrypoint-initdb.d
     networks:
       - foodrush-net
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_PASSWORD:-rootpassword}"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-postgres}"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -135,7 +136,6 @@ services:
     ports:
       - "8761:8761"
     environment:
-      # Override config server URL for Docker
       SPRING_CONFIG_IMPORT: "optional:configserver:http://config-server:8888"
       CONFIG_SERVER_URL: http://config-server:8888
       EUREKA_URL: http://discovery-server:8761/eureka/
@@ -156,7 +156,7 @@ services:
     container_name: user-service
     restart: unless-stopped
     depends_on:
-      mysql:
+      postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
@@ -165,14 +165,13 @@ services:
       discovery-server:
         condition: service_healthy
     environment:
-      # Override config server URL for Docker
       SPRING_CONFIG_IMPORT: "optional:configserver:http://config-server:8888"
       CONFIG_SERVER_URL: http://config-server:8888
       EUREKA_URL: http://discovery-server:8761/eureka/
-      DB_HOST: mysql
-      DB_PORT: 3306
-      DB_USERNAME: ${DB_USERNAME:-root}
-      DB_PASSWORD: ${DB_PASSWORD:-rootpassword}
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USERNAME: ${DB_USERNAME:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD}
       REDIS_HOST: redis
       REDIS_PORT: 6379
       JWT_SECRET: ${JWT_SECRET:-default-secret-key-for-jwt-signing-must-be-at-least-256-bits-long}
@@ -190,7 +189,7 @@ services:
     container_name: restaurant-service
     restart: unless-stopped
     depends_on:
-      mysql:
+      postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
@@ -201,14 +200,13 @@ services:
       discovery-server:
         condition: service_healthy
     environment:
-      # Override config server URL for Docker
       SPRING_CONFIG_IMPORT: "optional:configserver:http://config-server:8888"
       CONFIG_SERVER_URL: http://config-server:8888
       EUREKA_URL: http://discovery-server:8761/eureka/
-      DB_HOST: mysql
-      DB_PORT: 3306
-      DB_USERNAME: ${DB_USERNAME:-root}
-      DB_PASSWORD: ${DB_PASSWORD:-rootpassword}
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USERNAME: ${DB_USERNAME:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD}
       REDIS_HOST: redis
       REDIS_PORT: 6379
       JWT_SECRET: ${JWT_SECRET:-default-secret-key-for-jwt-signing-must-be-at-least-256-bits-long}
@@ -224,7 +222,7 @@ services:
     container_name: order-service
     restart: unless-stopped
     depends_on:
-      mysql:
+      postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
@@ -235,14 +233,13 @@ services:
       discovery-server:
         condition: service_healthy
     environment:
-      # Override config server URL for Docker
       SPRING_CONFIG_IMPORT: "optional:configserver:http://config-server:8888"
       CONFIG_SERVER_URL: http://config-server:8888
       EUREKA_URL: http://discovery-server:8761/eureka/
-      DB_HOST: mysql
-      DB_PORT: 3306
-      DB_USERNAME: ${DB_USERNAME:-root}
-      DB_PASSWORD: ${DB_PASSWORD:-rootpassword}
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USERNAME: ${DB_USERNAME:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD}
       REDIS_HOST: redis
       REDIS_PORT: 6379
       JWT_SECRET: ${JWT_SECRET:-default-secret-key-for-jwt-signing-must-be-at-least-256-bits-long}
@@ -258,7 +255,7 @@ services:
     container_name: payment-service
     restart: unless-stopped
     depends_on:
-      mysql:
+      postgres:
         condition: service_healthy
       kafka:
         condition: service_healthy
@@ -267,14 +264,13 @@ services:
       discovery-server:
         condition: service_healthy
     environment:
-      # Override config server URL for Docker
       SPRING_CONFIG_IMPORT: "optional:configserver:http://config-server:8888"
       CONFIG_SERVER_URL: http://config-server:8888
       EUREKA_URL: http://discovery-server:8761/eureka/
-      DB_HOST: mysql
-      DB_PORT: 3306
-      DB_USERNAME: ${DB_USERNAME:-root}
-      DB_PASSWORD: ${DB_PASSWORD:-rootpassword}
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USERNAME: ${DB_USERNAME:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD}
       JWT_SECRET: ${JWT_SECRET:-default-secret-key-for-jwt-signing-must-be-at-least-256-bits-long}
       JWT_EXPIRATION: ${JWT_EXPIRATION:-86400000}
       KAFKA_BOOTSTRAP: kafka:29092
@@ -288,7 +284,7 @@ services:
     container_name: delivery-service
     restart: unless-stopped
     depends_on:
-      mysql:
+      postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
@@ -299,14 +295,13 @@ services:
       discovery-server:
         condition: service_healthy
     environment:
-      # Override config server URL for Docker
       SPRING_CONFIG_IMPORT: "optional:configserver:http://config-server:8888"
       CONFIG_SERVER_URL: http://config-server:8888
       EUREKA_URL: http://discovery-server:8761/eureka/
-      DB_HOST: mysql
-      DB_PORT: 3306
-      DB_USERNAME: ${DB_USERNAME:-root}
-      DB_PASSWORD: ${DB_PASSWORD:-rootpassword}
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USERNAME: ${DB_USERNAME:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD}
       REDIS_HOST: redis
       REDIS_PORT: 6379
       JWT_SECRET: ${JWT_SECRET:-default-secret-key-for-jwt-signing-must-be-at-least-256-bits-long}
@@ -322,7 +317,7 @@ services:
     container_name: notification-service
     restart: unless-stopped
     depends_on:
-      mysql:
+      postgres:
         condition: service_healthy
       kafka:
         condition: service_healthy
@@ -331,14 +326,13 @@ services:
       discovery-server:
         condition: service_healthy
     environment:
-      # Override config server URL for Docker
       SPRING_CONFIG_IMPORT: "optional:configserver:http://config-server:8888"
       CONFIG_SERVER_URL: http://config-server:8888
       EUREKA_URL: http://discovery-server:8761/eureka/
-      DB_HOST: mysql
-      DB_PORT: 3306
-      DB_USERNAME: ${DB_USERNAME:-root}
-      DB_PASSWORD: ${DB_PASSWORD:-rootpassword}
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USERNAME: ${DB_USERNAME:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD}
       JWT_SECRET: ${JWT_SECRET:-default-secret-key-for-jwt-signing-must-be-at-least-256-bits-long}
       JWT_EXPIRATION: ${JWT_EXPIRATION:-86400000}
       KAFKA_BOOTSTRAP: kafka:29092
@@ -371,7 +365,6 @@ services:
       KAFKA_BOOTSTRAP: kafka:29092
       JWT_SECRET: ${JWT_SECRET:-default-secret-key-for-jwt-signing-must-be-at-least-256-bits-long}
       GATEWAY_URL: http://api-gateway:8080
-      # ── Gemini (free API key from AI Studio) ──
       GROQ_API_KEY: ${GROK_API_KEY}
       GROQ_MODEL: ${GROK_MODEL:-llama-3.3-70b-versatile}
     networks:
@@ -391,7 +384,6 @@ services:
     ports:
       - "8080:8080"
     environment:
-      # Override config server URL for Docker
       SPRING_CONFIG_IMPORT: "optional:configserver:http://config-server:8888"
       CONFIG_SERVER_URL: http://config-server:8888
       EUREKA_URL: http://discovery-server:8761/eureka/
@@ -428,7 +420,6 @@ services:
     ports:
       - "9090:9090"
     volumes:
-      # Map your local prometheus.yml to the container
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
     networks:
       - foodrush-net
@@ -450,5 +441,3 @@ services:
       - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
     networks:
       - foodrush-net
-
-  
